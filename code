@@ -1,0 +1,54 @@
+import pandas as pd
+
+# Load the data (replace with your file path)
+file_path = r"C:\Users\aatha\Downloads\top_gainers_losers1_cleaned3me.csv"
+data = pd.read_csv(file_path)
+
+# Check the columns to ensure 'date' exists
+print(data.columns)
+
+# Convert 'date' column to datetime with the correct format (DD-MM-YYYY)
+if 'date' in data.columns:
+    data['date'] = pd.to_datetime(data['date'], format='%d-%m-%Y')
+else:
+    raise ValueError("'date' column is missing in the dataset.")
+
+# Initialize an empty list to store top gainers and losers within the given ranges
+filtered_gainers_losers = []
+
+# Loop through each unique date in the dataset
+for date in data['date'].unique():
+    # Filter data for the specific date
+    daily_data = data[data['date'] == date]
+    
+    # Melt the DataFrame to long format to handle stock columns dynamically
+    melted_data = daily_data.melt(id_vars=['date'], var_name='stock', value_name='price_change')
+    
+    # Handle missing values in 'price_change'
+    melted_data.dropna(subset=['price_change'], inplace=True)
+    
+    # Filter gainers within 0.005 to 0.01
+    gainers = melted_data[(melted_data['price_change'] >= 0.005) & 
+                          (melted_data['price_change'] <= 0.01)]
+    # Sort gainers by price_change in descending order and take top 10
+    top_gainers = gainers.sort_values(by='price_change', ascending=False).head(10).assign(type='Gainer')
+    
+    # Filter losers within -0.005 to -0.01
+    losers = melted_data[(melted_data['price_change'] >= -0.01) & 
+                         (melted_data['price_change'] <= -0.005)]
+    # Sort losers by price_change in ascending order and take top 10
+    top_losers = losers.sort_values(by='price_change', ascending=True).head(10).assign(type='Loser')
+    
+    # Combine gainers and losers for the day
+    combined = pd.concat([top_gainers, top_losers])
+    
+    # Append to the final list
+    filtered_gainers_losers.append(combined)
+
+# Concatenate the results for all dates into a single DataFrame
+result = pd.concat(filtered_gainers_losers, ignore_index=True)
+
+# Display the result
+print(result)
+
+
